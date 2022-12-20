@@ -257,7 +257,7 @@ batch) VALUES (%s, %s, %s, %s,%s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
         print(f"Number of columns: {len(header_list)}")
 
         # write to csv
-        filepath = (r'C:\Users\TPC19\Dropbox\Coding\TEST\weather_data.csv')
+        filepath = (r'C:\Users\TPC19\Dropbox\Coding\Python Folder\weather_data.csv')
         with open(filepath, 'w') as file:
             writer = csv.writer(file)
             writer.writerow(header_list)
