@@ -3,6 +3,7 @@ import requests
 import psycopg2
 from datetime import datetime
 import time
+import csv
 
 #using API from https://open-meteo.com/
 
@@ -256,7 +257,8 @@ batch) VALUES (%s, %s, %s, %s,%s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
         print(f"Number of columns: {len(header_list)}")
 
         # write to csv
-        with open('weather_data.csv', 'w') as file:
+        filepath = (r'C:\Users\TPC19\Dropbox\Coding\TEST\weather_data.csv')
+        with open(filepath, 'w') as file:
             writer = csv.writer(file)
             writer.writerow(header_list)
             for i in datarows:
