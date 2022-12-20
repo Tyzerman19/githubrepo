@@ -10,6 +10,8 @@ def get_weather():
     #get data from url
     timestamp = datetime.now()
     print("Starting at: " + str(timestamp))
+
+    #gathers data for St. Catharines, Ontario every hour
     url = 'https://api.open-meteo.com/v1/forecast?latitude=43.14&longitude=-79.20&hourly=temperature_2m,relativehumidit\
 y_2m,dewpoint_2m,apparent_temperature,precipitation,rain,showers,snowfall,snow_depth,pressure_msl,surface_pressure,\
 cloudcover,cloudcover_low,cloudcover_mid,cloudcover_high,visibility,windspeed_10m,winddirection_10m,windgusts_10m,s\
@@ -210,6 +212,55 @@ batch) VALUES (%s, %s, %s, %s,%s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
         conn.commit()
         print("Closing connection.")
         conn.close()
+    def write_to_csv():
+        print("Writing to csv.")
+
+        # connect to database
+        conn = psycopg2.connect(
+            database="Weather",
+            user='postgres',
+            password='Bandit1(',
+            host='localhost',
+            port='5432')
+
+        # create cursor instance
+        cursor = conn.cursor()
+
+        # extract column names from table
+        cursor.execute("""SELECT 
+            column_name 
+            FROM 
+            information_schema.columns 
+            where 
+            table_name = 'weather' 
+            order by 
+            ordinal_position;""")
+        headers = cursor.fetchall()
+        header_list = []
+        for i in headers:
+            header_list.append(i[0])
+
+        # extract data from table
+        cursor.execute("select * from weather;")
+        # save all data to variable
+        data = cursor.fetchall()
+        datarows = []
+        for i in data:
+            datarows.append(i)
+
+        # close connection
+        cursor.close()
+        conn.close()
+
+        print(f"Number of rows: {len(data)}")
+        print(f"Number of columns: {len(header_list)}")
+
+        # write to csv
+        with open('weather_data.csv', 'w') as file:
+            writer = csv.writer(file)
+            writer.writerow(header_list)
+            for i in datarows:
+                writer.writerow(i)
     def closing_summary():
         #prints a simple time stampt and run time to console
         timestamp2 = datetime.now()
@@ -222,6 +273,7 @@ batch) VALUES (%s, %s, %s, %s,%s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
         get_daily_forecast()
         get_hourly_forecast()
         write_to_database()
+        write_to_csv()
         closing_summary()
     run_subtasks()
 
