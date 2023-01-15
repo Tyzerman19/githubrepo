@@ -1,18 +1,25 @@
-# a script that will compare the forecasted weather to the true weather after it occurs
+# collect online local weather data every hour
+# store the data 
+# analyze the data to compare accuracy of forecasted data to the real weather on that day
+
+# import libraries 
 import requests
 import psycopg2
 from datetime import datetime
 import time
 import csv
 
-#using API from https://open-meteo.com/
 
 def get_weather():
-    #get data from url
+    # this function will collect weather data through a free API
+
     timestamp = datetime.now()
+
     print("Starting at: " + str(timestamp))
 
-    #gathers data for St. Catharines, Ontario every hour
+    # using API from https://open-meteo.com/
+    # the below url will gather data for St. Catharines, Ontario once per hour
+
     url = 'https://api.open-meteo.com/v1/forecast?latitude=43.14&longitude=-79.20&hourly=temperature_2m,relativehumidit\
 y_2m,dewpoint_2m,apparent_temperature,precipitation,rain,showers,snowfall,snow_depth,pressure_msl,surface_pressure,\
 cloudcover,cloudcover_low,cloudcover_mid,cloudcover_high,visibility,windspeed_10m,winddirection_10m,windgusts_10m,s\
@@ -21,33 +28,56 @@ ure_1_3cm,soil_moisture_3_9cm,soil_moisture_9_27cm,soil_moisture_27_81cm&daily=t
 n,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,precipitation_sum,rain_sum,showers_sum,snowfall_\
 sum,precipitation_hours,windspeed_10m_max,windgusts_10m_max,winddirection_10m_dominant,shortwave_radiation_sum,et0_\
 fao_evapotranspiration&current_weather=true&timezone=America%2FNew_York'
+    
+    # get the data from web as a json
+
     webpage = requests.get(url)
     data = webpage.json()
-    #main data sets
+    
+    # divide the data into a few main data sets
+
     current_weather = data["current_weather"]
     current_time = current_weather["time"]
     daily_forecast = data["daily"]
     daily_time = daily_forecast["time"]
+    
+    # create an empty list for each 'slice' of data that we will retain
+    
     current_slice = []
     daily_slice = []
     hourly_slice = []
+
     def get_current_weather():
-        #puts the data from the current weather section into a single list/row to be written later
+        
+        # this function will create a single slice of data from the current weather set
+        # this slice represents the current weather conditions
+
         print("Processing current weather..")
+
+        # find current weather data
+
         current_temp = current_weather["temperature"]
         current_windspeed = current_weather['windspeed']
         current_wind_dir = current_weather['winddirection']
+
+        # append the current data to a list
+
         current_slice.append(current_time)
         current_slice.append(daily_time[1])
         current_slice.append(current_temp)
         current_slice.append(current_windspeed)
         current_slice.append(current_wind_dir)
         current_slice.append("Current")
-        print("Processing complete.")
-        print("Current weather: " + str(current_slice))
+
+        print("get_current_weather function end.")    
+    
     def get_daily_forecast():
-        #parses out the daily forecast time segments into lists/rows to be written later
-        print("Processing daily forecast..")
+        
+        # this function will create a single slice of data from the daily forecast set
+        # this slice represents daily forecast variables 
+
+        # find daily forecast data sets
+
         daily_temp_max = daily_forecast["temperature_2m_max"]
         daily_temp_min = daily_forecast["temperature_2m_min"]
         daily_apptemp_max = daily_forecast["apparent_temperature_max"]
@@ -62,8 +92,14 @@ fao_evapotranspiration&current_weather=true&timezone=America%2FNew_York'
         daily_wind_dir = daily_forecast["winddirection_10m_dominant"]
         daily_shortwave_rad_sum = daily_forecast["shortwave_radiation_sum"]
         daily_evapotranspiration =daily_forecast["et0_fao_evapotranspiration"]
+
         for day in range(len(daily_time)):
+            
+            # for each day in the forecast isolate that day's variables
+            # append those variables to a list for each timepoint
+
             days_forecast = []
+
             days_forecast.append(current_time)
             days_forecast.append(daily_time[day])
             days_forecast.append(daily_temp_min[day])
@@ -81,14 +117,21 @@ fao_evapotranspiration&current_weather=true&timezone=America%2FNew_York'
             days_forecast.append(daily_shortwave_rad_sum[day])
             days_forecast.append(daily_evapotranspiration[day])
             days_forecast.append("Daily")
+
+            # append this list for each do to the dataset for all daily forecasts 
+
             daily_slice.append(days_forecast)
-        print("Processing complete.")
-        print("Example row of daily forecast data: " + str(daily_slice[0]))
+        
+        print("get_daily_forecast function end.")
+    
     def get_hourly_forecast():
-        #parses out the hourly forecast time segments into lists/rows to be written later
+
+        # this function will create a single slice of data from the hourly forecast set
+        # this slice represents hourly forecast variables 
+        
         hourly_forecast = data['hourly']
         hourly_time = hourly_forecast['time']
-        print("Processing hourly forecast..")
+        
         hourly_temp = hourly_forecast["temperature_2m"]
         hourly_humidity = hourly_forecast["relativehumidity_2m"]
         hourly_dewpoint = hourly_forecast["dewpoint_2m"]
@@ -114,8 +157,14 @@ fao_evapotranspiration&current_weather=true&timezone=America%2FNew_York'
         hourly_soil_moisture_3_9cm = hourly_forecast["soil_moisture_3_9cm"]
         hourly_soil_moisture_9_27cm = hourly_forecast["soil_moisture_9_27cm"]
         hourly_soil_moisture_27_81cm = hourly_forecast["soil_moisture_27_81cm"]
+        
         for hour in range(len(hourly_time)):
+
+            # for each hour in the hourly forecast isolate that hour's variables
+            # append those variables to a list for each timepoint
+
             hours_forecast = []
+
             hours_forecast.append(current_time)
             hours_forecast.append(hourly_time[hour])
             hours_forecast.append(hourly_temp[hour])
@@ -144,79 +193,108 @@ fao_evapotranspiration&current_weather=true&timezone=America%2FNew_York'
             hours_forecast.append(hourly_soil_moisture_9_27cm[hour])
             hours_forecast.append(hourly_soil_moisture_27_81cm[hour])
             hours_forecast.append("Hourly")
+
+            # append this list for each do to the dataset for all hourly forecasts 
+
             hourly_slice.append(hours_forecast)
-        print("Processing complete.")
-        print("Example row of hourly forecast data: " + str(hourly_slice[0]))
+        
+        print("get_hourly_forecast function end.")
+
     def write_to_database():
-        #connects to the postgresql database and enters information
+        
+        # a function to write the data slices into a database
+
+        #connect to local postgresql database
+        
         conn = psycopg2.connect(
             database="Weather",
             user='postgres',
             password='Bandit1(',
             host='localhost',
             port='5432')
+        
+        # create cursor object
+        
         cursor = conn.cursor()
+        
+        # insert data from current slice
+        
         cursor.execute("INSERT into weather(pull_time,\
-forecast_date,\
-current_temp,\
-current_windspeed,\
-current_wind_direction,\
-batch) VALUES (%s, %s, %s, %s, %s, %s)", current_slice)
+                        forecast_date,\
+                        current_temp,\
+                        current_windspeed,\
+                        current_wind_direction,\
+                        batch) VALUES (%s, %s, %s, %s, %s, %s)", current_slice)
+        
+        # insert each day's data from daily slice
+        
         for day in daily_slice:
+            
             cursor.execute("INSERT into weather(pull_time,\
-forecast_date,\
-daily_temp_min,\
-daily_temp_max,\
-daily_app_temp_max,\
-daily_app_temp_min,\
-daily_precipitation,\
-daily_rain,\
-daily_showers,\
-daily_snow,\
-daily_precip_hours,\
-daily_wind_max,\
-daily_wind_gust,\
-daily_wind_direction,\
-daily_shortwave_rad_sum,\
-daily_evapotranspiration,\
-batch) VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s,%s, %s, %s, %s, %s,%s, %s)", day)
+                            forecast_date,\
+                            daily_temp_min,\
+                            daily_temp_max,\
+                            daily_app_temp_max,\
+                            daily_app_temp_min,\
+                            daily_precipitation,\
+                            daily_rain,\
+                            daily_showers,\
+                            daily_snow,\
+                            daily_precip_hours,\
+                            daily_wind_max,\
+                            daily_wind_gust,\
+                            daily_wind_direction,\
+                            daily_shortwave_rad_sum,\
+                            daily_evapotranspiration,\
+                            batch) VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s,%s, %s, %s, %s, %s,%s, %s)", day)
+        
+        # insert data for each hour in hourly slice
+
         for hour in hourly_slice:
+            
             cursor.execute("INSERT into weather(pull_time,\
-forecast_date,\
-hourly_temperature,\
-hourly_humidity,\
-hourly_dew_point,\
-hourly_apparent_temperature,\
-hourly_precipitation,\
-hourly_rain,\
-hourly_showers,\
-hourly_snow,\
-hourly_snow_depth,\
-hourly_msl_pressure,\
-hourly_surface_pressure,\
-hourly_cloud_cover,\
-hourly_visibility,\
-hourly_windspeed,\
-hourly_wind_dir,\
-hourly_wind_gusts,\
-hourly_soil_temp_0cm,\
-hourly_soil_temp_6cm,\
-hourly_soil_temp_18cm,\
-hourly_soil_temp_54cm,\
-hourly_soil_moisture_0_1cm,\
-hourly_soil_moisture_1_3cm,\
-hourly_soil_moisture_3_9cm,\
-hourly_soil_moisture_9_27cm,\
-hourly_soil_moisture_27_81cm,\
-batch) VALUES (%s, %s, %s, %s,%s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", hour)
-        print("Committing...")
+                            forecast_date,\
+                            hourly_temperature,\
+                            hourly_humidity,\
+                            hourly_dew_point,\
+                            hourly_apparent_temperature,\
+                            hourly_precipitation,\
+                            hourly_rain,\
+                            hourly_showers,\
+                            hourly_snow,\
+                            hourly_snow_depth,\
+                            hourly_msl_pressure,\
+                            hourly_surface_pressure,\
+                            hourly_cloud_cover,\
+                            hourly_visibility,\
+                            hourly_windspeed,\
+                            hourly_wind_dir,\
+                            hourly_wind_gusts,\
+                            hourly_soil_temp_0cm,\
+                            hourly_soil_temp_6cm,\
+                            hourly_soil_temp_18cm,\
+                            hourly_soil_temp_54cm,\
+                            hourly_soil_moisture_0_1cm,\
+                            hourly_soil_moisture_1_3cm,\
+                            hourly_soil_moisture_3_9cm,\
+                            hourly_soil_moisture_9_27cm,\
+                            hourly_soil_moisture_27_81cm,\
+                            batch) VALUES (%s, %s, %s, %s,%s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", hour)
+        
+        # commit and close the connection
+
         conn.commit()
-        print("Closing connection.")
+        
         conn.close()
+
+        print("write_to_database function end.")
+    
     def write_to_csv():
-        print("Writing to csv.")
+        
+        # function to read all data from database and write data to csv file
 
         # connect to database
+
         conn = psycopg2.connect(
             database="Weather",
             user='postgres',
@@ -225,9 +303,11 @@ batch) VALUES (%s, %s, %s, %s,%s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
             port='5432')
 
         # create cursor instance
+
         cursor = conn.cursor()
 
         # extract column names from table
+
         cursor.execute("""SELECT 
             column_name 
             FROM 
@@ -236,74 +316,124 @@ batch) VALUES (%s, %s, %s, %s,%s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
             table_name = 'weather' 
             order by 
             ordinal_position;""")
+        
+        # create a list of column names
+
         headers = cursor.fetchall()
         header_list = []
+
         for i in headers:
             header_list.append(i[0])
 
         # extract data from table
+
         cursor.execute("select * from weather;")
-        # save all data to variable
         data = cursor.fetchall()
+        
+        # save data to a list
+
         datarows = []
+
         for i in data:
             datarows.append(i)
 
         # close connection
+
         cursor.close()
         conn.close()
 
-        print(f"Number of rows: {len(data)}")
-        print(f"Number of columns: {len(header_list)}")
+        # identify filepath to write to
 
-        # write to csv
         filepath = (r'C:\Users\TPC19\Dropbox\Coding\Python Folder\weather_data.csv')
+        
+        # write all data to csv, overwrite old file
+
         with open(filepath, 'w') as file:
             writer = csv.writer(file)
             writer.writerow(header_list)
             for i in datarows:
                 writer.writerow(i)
+
+        print("write_to_csv function end.")
+
     def closing_summary():
-        #prints a simple time stampt and run time to console
+
+        #prints a simple time stamp and run time to console
+
         timestamp2 = datetime.now()
-        print("Ending at: " + str(timestamp2))
         run_time = timestamp2 - timestamp
+
+        print("Ending at: " + str(timestamp2))
         print("Run time: " + str(run_time))
+
     def run_subtasks():
-        #called each of the functions above
+
+        # runs a cycle through each function above 
+
+        # gathering functions
         get_current_weather()
         get_daily_forecast()
         get_hourly_forecast()
+
+        #writing functions
         write_to_database()
         write_to_csv()
+
+        # summary function
         closing_summary()
+
     run_subtasks()
 
 def timer():
-    #timer will cycle and when one or both of the trigger dates below are True the functions will be called
-    #unsure of when the data is updated. Running on 50th minute arbitrarily to avoid on the hour issues
+
+    # the timer continuously ticks at a specified interval and executes the get_weather function when the trigger time is met
+    # unsure of when the data is updated so the data is gathered on 10th minute of the hour to avoid on the hour issues
+
+    # indentify time
+
     current_time = datetime.now()
     minute = current_time.strftime("%M")
+
+    # identify when to run the get_weather function
+
     trigger_time = (minute == "10")
+
     if trigger_time is True:
         print("Fetching current weather and forecast at: " + str(current_time))
+
         try:
             get_weather()
+
         except:
+
+            # if get_weather fails wait some time and try again
+
             print("An error occurred when gathering weather data at: " + str(current_time))
-            time.sleep(5)
+            
+            time.sleep(30)
+            
             try:
                 get_weather()
+
             except:
+
+                # will not try again for this hour
+
                 print("A second error occurred when gathering weather data at: " + str(current_time))
                 print("No data for this hour. :(")
-        print("Sleeping for 60 seconds.")
+
+        # sleep for a full minute to ensure that we won't pull the same data for this hour
+
         time.sleep(60)
-        print("Waking.")
+
     time.sleep(15)
 
 def run():
+
+    # a basic function to run indefinitely 
+
     x = True
+    
     while (x):
         timer()
 
