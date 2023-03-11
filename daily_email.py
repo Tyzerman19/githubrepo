@@ -3,7 +3,8 @@
 # import libraries
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
 
 timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
 
@@ -57,8 +58,8 @@ hourly_soil_moisture_3_9cm = hourly_forecast["soil_moisture_3_9cm"]
 hourly_soil_moisture_9_27cm = hourly_forecast["soil_moisture_9_27cm"]
 hourly_soil_moisture_27_81cm = hourly_forecast["soil_moisture_27_81cm"]
 
-main_var_df = pd.DataFrame(
-    {'Time': hourly_time,
+df = pd.DataFrame(
+    {'Date': hourly_time,
      'Temperature': hourly_temp,
      'Humidity': hourly_humidity,
      'Feels Like': hourly_app_temp,
@@ -67,6 +68,48 @@ main_var_df = pd.DataFrame(
      'Wind Speed': hourly_windspeed,
      'Gusts': hourly_wind_gusts})
 
-print(main_var_df)
+df['Date'] = pd.to_datetime(df['Date'])
+max_temp = df['Temperature'].max()
+min_temp = df['Temperature'].min()
 
-# package as email and send to me
+print(df)
+print(df.dtypes)
+print(df.info())
+
+# one day's data
+
+today_stamp = datetime.now() + timedelta(days=1)
+today_stamp = today_stamp.strftime('%Y-%m-%d 00:00:00')
+today_stamp = datetime.strptime(today_stamp, '%Y-%m-%d %H:%M:%S')
+print(today_stamp)
+
+today = df.loc[df['Date'] < today_stamp]
+
+
+
+print(today)
+
+
+# temp = today.plot.line(
+#     x='Date',
+#     xlabel='Time',
+#     y='Temperature',
+#     ylim=[-20,40]
+#     )
+# zero_line = plt.axhline(y=0, color='b', linestyle='--')
+# precip = today.plot.line(x='Date', y='Precipitation')
+# plt.show()
+
+fig, axes = plt.subplots(2,1)
+
+temp = axes[0]
+today.plot(x='Date',y='Temperature',ylim=[min_temp, max_temp],ax=temp)
+temp.axhline(0, color='b',linestyle='--')
+
+
+precip = axes[1]
+today.plot(x='Date',y='Precipitation',ylim=[0,5],ax=precip, kind='bar')
+precip.axhline(0.5, color='b',linestyle='--',label='Light')
+precip.axhline(4, color='b',linestyle='--')
+
+plt.show()
