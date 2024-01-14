@@ -137,23 +137,39 @@ def play_match(game_id, number_of_rounds, games_per_round, p1name, p1skill, p2na
                     min(player1_score, player2_score)],
                 match_result]
 
-    # print out the results of the test match
-    print(outcome)
+    # return match results
+    return outcome
 
 
-# run a test match
-for i in range(18):
-    game_id = i
-    # pick 2 players for the game
-    player1 = random.choice(player_list)
-    player2 = random.choice(player_list)
-    player1_skill = player_dict.get(player1)
-    player2_skill = player_dict.get(player2)
+# run a season
 
-    play_match(game_id,
-               5,
-               7,
-               player1,
-               player1_skill,
-               player2,
-               player2_skill)
+def run_season(number_of_matches, number_of_rounds, games_per_round, list_of_players):
+
+    match_log = []
+
+    for i in range(number_of_matches):
+        game_id = i
+
+        # pick 2 players for the game
+
+        player1 = random.choice(list_of_players)
+        while True:
+            player2 = random.choice(list_of_players)
+            if player2 != player1:
+                break
+        player1_skill = player_dict.get(player1)
+        player2_skill = player_dict.get(player2)
+
+        outcome = play_match(game_id,
+                   number_of_rounds,
+                   games_per_round,
+                   player1,
+                   player1_skill,
+                   player2,
+                   player2_skill)
+
+        match_log.append(outcome)
+    for i in match_log:
+        print(i)
+
+run_season(100, 5, 7, player_list)
