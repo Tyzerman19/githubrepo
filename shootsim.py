@@ -17,7 +17,26 @@ player_dict = {
     "Jill":4,
     "Puppy":3,
     "Brent":2,
-    "Egg":1
+    "Egg":1,
+    "Shark":4,
+    "Box":1,
+    "Tay":5,
+    "Duo":2,
+    "Dino":3,
+    "Narv":1,
+    "Beat":2,
+    "Jee":3,
+    "Mint":4,
+    "Vent":5,
+    "Ang":1,
+    "Bank":2,
+    "Cal":3,
+    "Smoke":4,
+    "Rob":5,
+    "Wild":5,
+    "Felix":1,
+    "Flow":5,
+    "Bug":1
 }
 
 player_list = list(player_dict.keys())
@@ -79,7 +98,7 @@ def play_round(p1skill, p2skill, shots_per_round):
     # return the result of the round
     return round_result
 
-def play_match(game_id, number_of_rounds, games_per_round, p1name, p1skill, p2name, p2skill):
+def play_match(match_id, number_of_rounds, shots_per_round, p1name, p1skill, p2name, p2skill):
     # function to complete a match by playing multiple rounds
     # intakes the number of rounds/games per round and the skill of each player
 
@@ -92,7 +111,7 @@ def play_match(game_id, number_of_rounds, games_per_round, p1name, p1skill, p2na
     for i in range(number_of_rounds):
 
         # play the round
-        round_result = play_round(p1skill, p2skill, games_per_round)
+        round_result = play_round(p1skill, p2skill, shots_per_round)
 
         # add round result to the list
         match_list.append(round_result)
@@ -129,47 +148,96 @@ def play_match(game_id, number_of_rounds, games_per_round, p1name, p1skill, p2na
     player2_score = match_result[1]
 
     # package the outcome to return
-    outcome = [game_id,
-                result,
-                [winner, winner_skill,
+    outcome = [match_id,
+               result,
+               [winner,
                     max(player1_score, player2_score)],
-                [loser, loser_skill,
+               [loser,
                     min(player1_score, player2_score)],
-                match_result]
+               match_result,
+               p1name,
+               p2name]
 
     # return match results
     return outcome
 
-
-# run a season
-
-def run_season(number_of_matches, number_of_rounds, games_per_round, list_of_players):
+def run_event(number_of_matches, number_of_rounds, shots_per_round, list_of_players, event_id):
+    # run an event with many matches
+    # accept number of matches, number of rounds per match, shots per round, player list, and event id number
+    # output the event table
 
     match_log = []
 
+    # run the matches
     for i in range(number_of_matches):
-        game_id = i
+        match_id= i
 
-        # pick 2 players for the game
-
+        # pick 2 random players for the match
         player1 = random.choice(list_of_players)
         while True:
             player2 = random.choice(list_of_players)
             if player2 != player1:
                 break
+
+        # get the player skill levels
         player1_skill = player_dict.get(player1)
         player2_skill = player_dict.get(player2)
 
-        outcome = play_match(game_id,
-                   number_of_rounds,
-                   games_per_round,
-                   player1,
-                   player1_skill,
-                   player2,
-                   player2_skill)
+        # play their match
+        outcome = play_match(match_id,
+                             number_of_rounds,
+                             shots_per_round,
+                             player1,
+                             player1_skill,
+                             player2,
+                             player2_skill)
 
         match_log.append(outcome)
-    for i in match_log:
-        print(i)
 
-run_season(100, 5, 7, player_list)
+    # organize the match logs into summary tables
+    match_df = pd.DataFrame(match_log, columns=["match_id", "Result Type", "Winner", "Loser", "Score", "P1 Name", "P2 Name"])
+
+    match_df[["Winner Name", "Winner Points"]] = match_df["Winner"].apply(pd.Series)
+    match_df[["Loser Name", "Loser Points"]] = match_df["Loser"].apply(pd.Series)
+
+    del match_df["Winner"]
+    del match_df["Loser"]
+
+    win_counts = match_df["Winner Name"].value_counts().reset_index()
+    win_counts.columns = ["Name", "Wins"]
+
+    loss_counts = match_df["Loser Name"].value_counts().reset_index()
+    loss_counts.columns = ["Name", "Losses"]
+
+    tie_counts = match_df[["Result Type", "P1 Name", "P2 Name"]]
+    tie_counts = tie_counts[tie_counts["Result Type"] == "Tie"]
+    tie_counts = pd.concat([tie_counts["P1 Name"], tie_counts["P2 Name"]])
+    tie_counts = tie_counts.value_counts().reset_index()
+    tie_counts.columns = ["Name", "Ties"]
+
+    event_df = pd.merge(win_counts, loss_counts, on="Name", how="outer")
+    event_df = pd.merge(event_df, tie_counts, on="Name", how="outer")
+    event_df.drop(event_df[event_df["Name"] == "None"].index, inplace=True)
+    event_df.fillna(0,inplace=True)
+    event_df[["Wins", "Losses", "Ties"]] = event_df[["Wins", "Losses", "Ties"]].astype(int)
+    event_df["Matches"] = event_df[["Wins", "Losses", "Ties"]].sum(axis=1)
+    event_df["Win Pct"] = (event_df["Wins"] / (event_df["Wins"] + event_df["Losses"]) * 100).round(1)
+    event_df["event_id"] = event_id
+    event_df = event_df[["Name", "Matches", "Wins", "Losses", "Ties", "event_id"]]
+
+    return event_df
+
+def run_season(number_of_events):
+    season_results = pd.DataFrame()
+
+    for i in range(number_of_events):
+        event_result = run_event(18, 3, 3, player_list, i)
+        season_results = pd.concat([season_results, event_result], ignore_index=True)
+
+    season_results = season_results.groupby("Name").sum()
+    season_results["Win Pct"] = (season_results["Wins"] /
+                                 (season_results["Wins"] + season_results["Losses"]) * 100).round(1)
+    season_results = season_results.sort_values(by="Wins", ascending=False)
+    print(season_results)
+
+run_season(12)
